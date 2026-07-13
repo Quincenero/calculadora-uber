@@ -1,84 +1,84 @@
 
-export default function App() {
-  // 1. Leemos la URL directamente al renderizar (¡chau useEffect!)
+function App() {
+  // 1. Capturamos los parámetros de la URL
   const params = new URLSearchParams(window.location.search);
-  const rawPrecio = params.get('p');      
-  const rawDistancia = params.get('d');   
+  const rawPrecio = params.get('p');      // Ej: $4.800,00
+  const rawDistancia = params.get('d');   // Ej: 6,5 km
+  const rawTiempo = params.get('t');      // Ej: 15 min
 
-  let datos = { precio: 0, distancia: 0, xKm: 0, listo: false };
+  let datos = { listo: false };
 
-  // 2. Si existen los parámetros, hacemos la limpieza al toque
-  // 2. Si existen los parámetros, hacemos una limpieza a prueba de balas
-  if (rawPrecio && rawDistancia) {
-    // Explicación: Nos quedamos SOLO con números, comas y puntos. Volamos $, "km", espacios, etc.
+  // 2. Limpieza a prueba de balas para las tres variables
+  if (rawPrecio && rawDistancia && rawTiempo) {
     const soloNumerosPrecio = rawPrecio.replace(/[^0-9.,]/g, '');
     const soloNumerosDistancia = rawDistancia.replace(/[^0-9.,]/g, '');
+    const soloNumerosTiempo = rawTiempo.replace(/[^0-9]/g, '');
 
-    // Para el precio (ej: "4.800,00"): volamos los puntos de miles y cambiamos la coma decimal por punto
-    // Si viene sin puntos (ej: "4800,00"), igual funciona perfecto
+    // Formateo de precio (coma a punto decimal)
     let precioLimpio = soloNumerosPrecio;
     if (precioLimpio.includes('.') && precioLimpio.includes(',')) {
-      precioLimpio = precioLimpio.replace(/\./g, ''); // Saca puntos de miles
+      precioLimpio = precioLimpio.replace(/\./g, '');
     }
-    precioLimpio = precioLimpio.replace(',', '.'); // Coma a punto decimal
+    precioLimpio = precioLimpio.replace(',', '.');
 
-    // Para la distancia (ej: "6,5"): cambiamos la coma por punto para que JavaScript lo entienda
+    // Formateo de distancia
     const distanciaLimpia = soloNumerosDistancia.replace(',', '.');
 
     const precio = parseFloat(precioLimpio);
     const distancia = parseFloat(distanciaLimpia);
+    const tiempo = parseInt(soloNumerosTiempo, 10);
 
-    if (!isNaN(precio) && !isNaN(distancia) && distancia > 0) {
+    if (!isNaN(precio) && !isNaN(distancia) && !isNaN(tiempo) && distancia > 0 && tiempo > 0) {
       datos = {
         precio,
         distancia,
+        tiempo,
         xKm: Math.round(precio / distancia),
+        xMin: Math.round(precio / tiempo),
         listo: true
       };
     }
   }
 
-  // 3. Si no hay datos válidos en la URL, mostramos el cartel de espera
+  // 3. Lógica de rentabilidad (¡Filtro ÚNICO por kilómetro!)
+  // El color depende SOLO de que pague $750 o más por cada km recorrido
+  const esRentable = datos.listo && datos.xKm >= 750;
+
+  // 4. Renderizado en pantalla
   if (!datos.listo) {
     return (
-      <div style={{ 
-        height: '100vh', display: 'flex', justifyContent: 'center', 
-        alignItems: 'center', color: '#fff', background: '#222', fontFamily: 'sans-serif' 
-      }}>
-        <h2>Esperando datos de la URL... Pegá el test en la barra de direcciones.</h2>
+      <div style={{ backgroundColor: '#4a4a4a', color: 'white', height: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', fontSize: '24px', fontFamily: 'sans-serif' }}>
+        Esperando datos de Uber...
       </div>
     );
   }
 
-  // 4. Si todo está bien, calculamos la rentabilidad y renderizamos el semáforo
-  const esRentable = datos.xKm >= 800; // Piso de ganancia por km
-
   return (
-    <div style={{
-      height: '100vh',
-      display: 'flex',
+    <div style={{ 
+      backgroundColor: esRentable ? '#2ecc71' : '#e74c3c', 
+      color: 'white', 
+      height: '100vh', 
+      display: 'flex', 
       flexDirection: 'column',
-      justifyContent: 'center',
-      alignItems: 'center',
-      backgroundColor: esRentable ? '#1b5e20' : '#b71c1c', 
-      color: 'white',
+      justifyContent: 'center', 
+      alignItems: 'center', 
       fontFamily: 'sans-serif',
-      transition: 'background-color 0.5s ease'
+      padding: '20px',
+      boxSizing: 'border-box'
     }}>
-      <h1 style={{ fontSize: '5rem', margin: '0' }}>${datos.xKm} / KM</h1>
-      <p style={{ fontSize: '2rem', opacity: 0.8 }}>
-        Viaje de ${datos.precio} en {datos.distancia} km
+      <h1 style={{ fontSize: '12vw', margin: '0 0 10px 0' }}>${datos.precio}</h1>
+      <p style={{ fontSize: '6vw', margin: '5px 0' }}>📍 {datos.distancia} km ({datos.tiempo} min)</p>
+      
+      <div style={{ borderTop: '2px solid rgba(255,255,255,0.4)', width: '80%', margin: '20px 0' }}></div>
+      
+      <h2 style={{ fontSize: '8vw', margin: '10px 0' }}>${datos.xKm} / km</h2>
+      <h2 style={{ fontSize: '8vw', margin: '10px 0' }}>${datos.xMin} / min</h2>
+      
+      <p style={{ fontSize: '4vw', marginTop: '30px', opacity: 0.8 }}>
+        {esRentable ? '¡VIAJE RENTABLE! 🚀' : 'RECHAZAR VIAJE ❌'}
       </p>
-      <div style={{
-        marginTop: '20px',
-        padding: '15px 30px',
-        background: 'rgba(255,255,255,0.2)',
-        borderRadius: '10px',
-        fontSize: '2.5rem',
-        fontWeight: 'bold'
-      }}>
-        {esRentable ? '¡SÍ, AGARRALO!' : 'NO RINDE'}
-      </div>
     </div>
   );
 }
+
+export default App;
